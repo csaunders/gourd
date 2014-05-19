@@ -1,0 +1,7 @@
+{
+  "pattern": ".*.go",
+  "commands": [
+    "go build",
+    "go test"
+  ]
+}
