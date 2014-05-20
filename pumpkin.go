@@ -15,22 +15,21 @@ type Pumpkin struct {
 }
 
 func NewPumpkin(filename string) Pumpkin {
-	var data map[string]interface{}
+
 	bytes, err := ioutil.ReadFile(filename)
 	check(err)
-	err = json.Unmarshal(bytes, &data)
-	check(err)
 
-	patternString := data["pattern"].(string)
-	pattern, err := regexp.Compile(patternString)
-	check(err)
-
-	commandArray := data["commands"].([]interface{})
-	commands := make([]string, len(commandArray))
-	for i := 0; i < len(commandArray); i++ {
-		commands[i] = commandArray[i].(string)
+	var pumpkin struct {
+		Pattern  string   `json:"pattern"`
+		Commands []string `json:"commands"`
 	}
-	return Pumpkin{pattern: pattern, commands: commands}
+	err = json.Unmarshal(bytes, &pumpkin)
+	check(err)
+
+	return Pumpkin{
+		pattern:  regexp.MustCompile(pumpkin.Pattern),
+		commands: pumpkin.Commands,
+	}
 }
 
 func (p Pumpkin) Carve(filename string, output chan string) {
