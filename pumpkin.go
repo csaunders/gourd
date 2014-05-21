@@ -10,50 +10,57 @@ import (
 )
 
 type Pumpkin struct {
-	pattern  *regexp.Regexp
-	commands []string
+	Regex    *regexp.Regexp
+	Pattern  string   `json:"pattern"`
+	Commands []string `json:"commands"`
 }
 
-func NewPumpkin(filename string) Pumpkin {
-	var data map[string]interface{}
+func NewPumpkinFromFile(filename string) Pumpkin {
 	bytes, err := ioutil.ReadFile(filename)
 	check(err)
-	err = json.Unmarshal(bytes, &data)
-	check(err)
-
-	patternString := data["pattern"].(string)
-	pattern, err := regexp.Compile(patternString)
-	check(err)
-
-	commandArray := data["commands"].([]interface{})
-	commands := make([]string, len(commandArray))
-	for i := 0; i < len(commandArray); i++ {
-		commands[i] = commandArray[i].(string)
-	}
-	return Pumpkin{pattern: pattern, commands: commands}
+	return NewPumpkin(bytes)
 }
 
-func (p Pumpkin) Carve(filename string, output chan string) {
-	if p.check(filename) {
-		p.process(output)
+func NewPumpkin(bytes []byte) Pumpkin {
+	var pumpkin Pumpkin
+	err := json.Unmarshal(bytes, &pumpkin)
+	check(err)
+
+	pumpkin.Regex = regexp.MustCompile(pumpkin.Pattern)
+	return pumpkin
+}
+
+func (p Pumpkin) Carve(filename string, output chan Message) {
+	if p.Check(filename) {
+		p.Process(output)
 	}
 }
 
-func (p Pumpkin) check(filename string) bool {
-	return p.pattern.MatchString(filename)
+func (p Pumpkin) Check(filename string) bool {
+	return p.Regex.MatchString(filename)
 }
 
-func (p Pumpkin) process(output chan string) {
-	for _, command := range p.commands {
-		output <- command
+func (p Pumpkin) Process(output chan Message) {
+	var stdout, stderr bytes.Buffer
+	output <- Message{Color: yellow, Content: "---------------"}
+	for _, command := range p.Commands {
 		args := strings.Split(command, " ")
 		cmd := exec.Command(args[0], args[1:]...)
-		var out bytes.Buffer
-		cmd.Stdout = &out
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		err := cmd.Run()
-		if err != nil {
 
+		msg := &Message{Color: green, Content: stdout.String()}
+		if msg.IsAvailable() {
+			output <- Message{Color: yellow, Content: command}
 		}
-		output <- out.String()
+
+		if err != nil {
+			msg.Color = red
+			output <- *msg
+			msg.Content = stderr.String()
+		}
+
+		output <- *msg
 	}
 }
