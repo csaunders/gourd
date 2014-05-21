@@ -30,6 +30,13 @@ func NewPumpkin(bytes []byte) Pumpkin {
 	return pumpkin
 }
 
+func (p Pumpkin) Validate() (bool, string) {
+	if len(p.Commands) <= 0 {
+		return false, "commands cannot be blank"
+	}
+	return true, ""
+}
+
 func (p Pumpkin) Carve(filename string, output chan Message) {
 	if p.Check(filename) {
 		p.Process(output)

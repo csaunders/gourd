@@ -17,6 +17,13 @@ func PumpkinToTest() Pumpkin {
 	return NewPumpkin([]byte(basicPumpkin))
 }
 
+func TestExtractingAnInvalidPumpkin(t *testing.T) {
+	pumpkin := NewPumpkin([]byte(`{"pattern": ".*"}`))
+	valid, message := pumpkin.Validate()
+	assert.Equal(t, false, valid)
+	assert.Equal(t, "commands cannot be blank", message)
+}
+
 func TestExtractingAPumpkin(t *testing.T) {
 	pumpkin := PumpkinToTest()
 	assert.Equal(t, ".*\\.go", pumpkin.Regex.String())

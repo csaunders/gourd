@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/howeyc/fsnotify"
+	"os"
 )
 
 var red string = "0;31"
@@ -33,8 +34,25 @@ func check(e error) {
 }
 
 func main() {
-	pumpkin := NewPumpkinFromFile(*pumpkinName)
 	logger := make(chan Message)
+	go func() {
+		for {
+			select {
+			case output := <-logger:
+				if output.IsAvailable() {
+					fmt.Println(output.String())
+				}
+			}
+		}
+	}()
+
+	pumpkin := NewPumpkinFromFile(*pumpkinName)
+	valid, message := pumpkin.Validate()
+	if !valid {
+		logger <- Message{Color: red, Content: message}
+		os.Exit(1)
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	check(err)
 
@@ -46,17 +64,6 @@ func main() {
 			case ev := <-watcher.Event:
 				if !ev.IsAttrib() {
 					pumpkin.Carve(ev.Name, logger)
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
-			case output := <-logger:
-				if output.IsAvailable() {
-					fmt.Println(output.String())
 				}
 			}
 		}
